@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="b6247ce5-5669-4098-8e69-4cdfe9ef37d4" file="config.yaml" />
+	<configuration doc:name="Configuration" doc:id="f3349361-e5e0-401a-ab67-5f7b4d27fa28" defaultErrorHandler-ref="globalError_Handler" />
+	<http:listener-config name="apiHTTPListenerConfig" doc:name="HTTP Listener config" doc:id="64a3ed91-063e-4d9e-bfd9-01e07c97ac8d" >
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
+	</http:listener-config>
+	<db:config name="apiDatabaseConfig" doc:name="Database Config" doc:id="ee67b028-3fcd-4c8e-953d-018cc7411222" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.user}" password="${db.password}" database="${db.database}" />
+	</db:config>
+	<error-handler name="globalError_Handler" doc:id="8457b452-aaf7-4614-a483-391993f909c7" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="87905f41-5ac6-4309-a1bb-d38a18aa9f39" type="ANY">
+			<set-payload value="Unexpected error is occurred" doc:name="setErrorMessage" doc:id="21bbeac9-baab-4e78-ba56-094545964754" />
+			<logger level="INFO" doc:name="Logger" doc:id="c32bd222-148d-42be-a5a2-699c54ac6893" />
+		</on-error-propagate>
+	</error-handler>
+</mule>

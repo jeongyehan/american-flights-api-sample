@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getFlights" doc:id="d2667d51-10a2-4cca-9bde-bcaa1d4f524e" >
+		<set-variable value='#[attributes.queryParams.destination default "ALL"]' doc:name="setCode" doc:id="8786517d-f068-4a64-9121-badd0c3f42ff" variableName="code"/>
+		<ee:transform doc:name="setQuery" doc:id="5a53e119-03c9-4391-8d8f-ce7761edcbe8">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="query"><![CDATA[%dw 2.0
+output text/plain
+
+var defaultQuery = "SELECT * FROM american"
+---
+
+if (vars.code == "ALL") 
+defaultQuery 
+else
+defaultQuery ++ " WHERE toAirport = :code"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="convertFlights" doc:id="8fe09719-d0ed-473c-97f7-b1bc2e81fcab">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( flight , index ) -> {
+	plane: {
+		"type": flight.planeType,
+		totalSeats: flight.totalSeats
+	},
+	code: (flight.code1 default "") ++ (flight.code2 default ""),
+	price: flight.price default 0,
+	origin: flight.fromAirport default "",
+	destination: flight.toAirport default "",
+	ID: flight.ID,
+	departureDate: flight.takeOffDate as String default "",
+	emptySeats: flight.seatsAvailable default 0
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:select doc:name="selectFlights" doc:id="be98381a-58e7-4067-bd49-0850884fe17c" config-ref="apiDatabaseConfig">
+					<db:sql><![CDATA[#[vars.query]]]></db:sql>
+					<db:input-parameters><![CDATA[#[{"code": vars.code}]]]></db:input-parameters>
+				</db:select>
+		<logger level="INFO" doc:name="Logger" doc:id="9c21d680-1bc8-4b39-bb7d-bad314669a54" message='#[sizeOf(payload) as String ++ " flights are retrieved."]'/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1f6a0caa-603a-431c-a66b-f6599f931703" type="ANY" >
+				<set-payload value="Unexpected error is occurred during getFlights" doc:name="setErrorMessage" doc:id="56d0d3fd-b7ec-4ba7-b5f5-e830516a2410" />
+				<logger level="INFO" doc:name="Logger" doc:id="28fb97e8-322b-4290-bb51-433de2729305" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getFlight" doc:id="e31fa9bc-e254-4954-8932-f11874b7022c" >
+		<set-variable value='#[attributes.uriParams.ID]' doc:name="setFlightId" doc:id="a7f02dba-7404-4288-9e10-13d7d0e86217" variableName="flightId" />
+		<db:select doc:name="selectFlight" doc:id="d835bc85-7510-4643-a496-b119786318f2" config-ref="apiDatabaseConfig">
+				<db:sql><![CDATA[SELECT * FROM american WHERE id = :id]]></db:sql>
+				<db:input-parameters><![CDATA[#[{"id": vars.flightId}]]]></db:input-parameters>
+			</db:select>
+		<ee:transform doc:name="convertFlights" doc:id="d96255fa-7cb6-4125-8e7e-e5fe56df6d8c">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+var flight = payload[0]
+---
+{
+	plane: {
+		"type": flight.planeType,
+		totalSeats: flight.totalSeats
+	},
+	code: (flight.code1 default "") ++ (flight.code2 default ""),
+	price: flight.price default 0,
+	origin: flight.fromAirport default "",
+	destination: flight.toAirport default "",
+	ID: flight.ID,
+	departureDate: flight.takeOffDate as String default "",
+	emptySeats: flight.seatsAvailable default 0
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="a47a81f1-f86f-49cb-8eee-7abda4fc8e56" message='#["Flight ID: " ++ vars.flightId as String ++ " is retrieved."]' />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e454c71b-4912-4fe2-ab5d-7823d7a76417" type="ANY" >
+				<set-payload value="Unexpected error is occurred during getFlight" doc:name="setErrorMessage" doc:id="196d5a01-1b0f-4883-ad6f-61daf501ef22" />
+				<logger level="INFO" doc:name="Logger" doc:id="ac912e8a-8b79-4388-9d4a-d5852bb72ebf" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
